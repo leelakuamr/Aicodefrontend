@@ -13,9 +13,14 @@
         : PRODUCTION_API_URL;
 
     if (typeof window !== 'undefined' && !window.FIREBASE_CONFIG) {
-        try {
-            var rawCfg = localStorage.getItem('firebaseConfig');
-            if (rawCfg) window.FIREBASE_CONFIG = JSON.parse(rawCfg);
-        } catch (e) {}
+        window.FIREBASE_CONFIG = {
+            apiKey: "AIzaSyATIjf7Ga2m7LzoW8VcjwClCts1ktv1Scc",
+            authDomain: "aicodere.firebaseapp.com",
+            projectId: "aicodere",
+            storageBucket: "aicodere.firebasestorage.app",
+            messagingSenderId: "861410273348",
+            appId: "1:861410273348:web:718e7e65a3466beb487411",
+            measurementId: "G-M68MJG1TYW"
+        };
     }
 })();

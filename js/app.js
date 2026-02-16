@@ -13,9 +13,10 @@
 const API_BASE = (typeof window !== 'undefined' && window.API_BASE) ? window.API_BASE : 'http://localhost:8000';
 const AUTH_KEY = 'codeReviewUser';
 const PENDING_VERIFY_KEY = 'pendingVerify';
-const firebaseAuth = typeof window !== 'undefined' ? window.firebaseAuth : null;
-const USE_FIREBASE = !!firebaseAuth;
-const firebaseDb = typeof window !== 'undefined' ? window.firebaseDb : null;
+var firebaseAuth = (typeof window !== 'undefined' ? window.firebaseAuth : null);
+var firebaseDb = (typeof window !== 'undefined' ? window.firebaseDb : null);
+function getFirebaseAuth() { return (typeof window !== 'undefined' ? window.firebaseAuth : null); }
+function getFirebaseDb() { return (typeof window !== 'undefined' ? window.firebaseDb : null); }
 const HISTORY_KEY = 'codeReviewHistory';
 const THEME_KEY = 'codeReviewTheme';
 const MAX_HISTORY = 50;
@@ -385,14 +386,15 @@ function initForgotPassword() {
     if (!link) return;
     link.addEventListener('click', function (e) {
         e.preventDefault();
-        if (!(USE_FIREBASE && firebaseAuth)) return;
+        var fa = getFirebaseAuth();
+        if (!fa) return;
         var email = (loginEmail && loginEmail.value || '').trim();
         if (!email) {
             loginError.textContent = 'Enter your email, then click “Forgot password?”.';
             loginError.classList.remove('hidden');
             return;
         }
-        firebaseAuth.sendPasswordResetEmail(email).then(function () {
+        fa.sendPasswordResetEmail(email).then(function () {
             loginError.textContent = 'Password reset email sent. Check your inbox and spam.';
             loginError.classList.remove('hidden');
         }).catch(function (err) {
@@ -475,7 +477,7 @@ function showAppForUser(userData) {
 
 // Auth: check existing session (Firebase or fallback)
 function checkAuth() {
-    if (USE_FIREBASE) return;
+    if (getFirebaseAuth()) return;
     var user = sessionStorage.getItem(AUTH_KEY);
     if (user) {
         try {
@@ -666,7 +668,7 @@ function runDemoLogin() {
     if (loginEmail) loginEmail.value = DEMO_EMAIL;
     if (loginPassword) loginPassword.value = DEMO_PASSWORD;
     if (loginError) loginError.classList.add('hidden');
-    if (USE_FIREBASE) sessionStorage.setItem(DEMO_USER_FLAG, '1');
+    if (getFirebaseAuth()) sessionStorage.setItem(DEMO_USER_FLAG, '1');
     if (loginForm) {
         setTimeout(function () {
             loginForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
@@ -685,14 +687,15 @@ function initDemoLogin() {
 
 // When user verifies email in another tab, refresh auth and show sign-in page
 function checkEmailVerifiedAndRedirect() {
-    if (!USE_FIREBASE || !firebaseAuth) return;
-    var user = firebaseAuth.currentUser;
+    var fa = getFirebaseAuth();
+    if (!fa) return;
+    var user = fa.currentUser;
     if (!user || !firebaseVerifyScreen || firebaseVerifyScreen.classList.contains('hidden')) return;
     user.reload().then(function () {
-        var u = firebaseAuth.currentUser;
+        var u = fa.currentUser;
         if (u && u.emailVerified) {
             sessionStorage.setItem(EMAIL_JUST_VERIFIED_FLAG, '1');
-            firebaseAuth.signOut();
+            fa.signOut();
         }
     }).catch(function () {});
 }
@@ -701,7 +704,8 @@ function checkEmailVerifiedAndRedirect() {
 // Secures routes: only verified users can access dashboard; unverified see "verify your email" screen.
 // After email verification link: sign out and show login page with "Email verified! Sign in."
 function initFirebaseAuth() {
-    if (!USE_FIREBASE || !firebaseAuth) return;
+    firebaseAuth = getFirebaseAuth();
+    if (!firebaseAuth) return;
     // When tab becomes visible, check if user verified in another tab
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'visible') checkEmailVerifiedAndRedirect();
@@ -768,7 +772,8 @@ function initFirebaseAuth() {
 function initLoginForm() {
     if (!loginForm) return;
 
-    if (USE_FIREBASE && firebaseAuth) {
+    firebaseAuth = getFirebaseAuth();
+    if (firebaseAuth) {
         loginForm.addEventListener('submit', function (e) {
             e.preventDefault();
             loginError.classList.add('hidden');
@@ -806,6 +811,11 @@ function initLoginForm() {
         const password = loginPassword.value;
 
         try {
+            if (getFirebaseAuth()) {
+                // If Firebase became available late, prefer it to prevent duplicates
+                await getFirebaseAuth().signInWithEmailAndPassword(email, password);
+                return;
+            }
             const res = await fetch(`${API_BASE}/api/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -843,7 +853,8 @@ function initLoginForm() {
 function initSignupForm() {
     if (!signupForm) return;
 
-    if (USE_FIREBASE && firebaseAuth) {
+    firebaseAuth = getFirebaseAuth();
+    if (firebaseAuth) {
         signupForm.addEventListener('submit', function (e) {
             e.preventDefault();
             signupError.classList.add('hidden');
@@ -868,6 +879,7 @@ function initSignupForm() {
                 .then(function (userCredential) {
                     var user = userCredential.user;
                     if (user) {
+                        firebaseDb = getFirebaseDb();
                         if (firebaseDb && firebase && firebase.database && firebase.database.ServerValue) {
                             try {
                                 var userRef = firebaseDb.ref('users/' + user.uid);
@@ -881,6 +893,11 @@ function initSignupForm() {
                     }
                 })
                 .catch(function (err) {
+                    if (err && err.code === 'auth/email-already-in-use') {
+                        signupError.textContent = 'This email is already registered. Try signing in.';
+                        signupError.classList.remove('hidden');
+                        return;
+                    }
                     signupError.textContent = getFirebaseAuthErrorMessage(err);
                     signupError.classList.remove('hidden');
                 })
@@ -906,6 +923,18 @@ function initSignupForm() {
             signupError.classList.remove('hidden');
             return;
         }
+        if (getFirebaseAuth()) {
+            // If Firebase became available, route through it to enforce uniqueness
+            try {
+                await getFirebaseAuth().createUserWithEmailAndPassword(signupEmail.value.trim(), signupPassword.value);
+                sessionStorage.setItem(SHOW_WELCOME_FLAG, '1');
+                return;
+            } catch (err) {
+                signupError.textContent = getFirebaseAuthErrorMessage(err);
+                signupError.classList.remove('hidden');
+                return;
+            }
+        }
         const name = signupName.value.trim();
         const email = signupEmail.value.trim();
         sessionStorage.setItem(AUTH_KEY, JSON.stringify({ email, username: name }));
@@ -917,11 +946,12 @@ function initSignupForm() {
 
 // Firebase: init "verify your email" screen — Resend verification email & Sign out
 function initFirebaseVerifyScreen() {
-    if (!USE_FIREBASE || !firebaseAuth) return;
+    firebaseAuth = getFirebaseAuth();
+    if (!firebaseAuth) return;
 
     if (btnResendFirebase) {
         btnResendFirebase.addEventListener('click', function () {
-            var user = firebaseAuth.currentUser;
+            var user = getFirebaseAuth()?.currentUser;
             if (!user) return;
             if (firebaseVerifyResendSuccess) firebaseVerifyResendSuccess.classList.add('hidden');
             if (firebaseVerifyResendError) {
@@ -957,7 +987,9 @@ function initFirebaseVerifyScreen() {
 
     if (btnSignOutFromVerify) {
         btnSignOutFromVerify.addEventListener('click', function () {
-            firebaseAuth.signOut().then(function () {
+            var fa = getFirebaseAuth();
+            if (!fa) return;
+            fa.signOut().then(function () {
                 hideFirebaseVerifyScreen();
                 if (loginScreen) loginScreen.classList.remove('hidden');
             });
@@ -970,8 +1002,9 @@ function initLogout() {
     if (!btnLogout) return;
 
     btnLogout.addEventListener('click', function () {
-        if (USE_FIREBASE && firebaseAuth) {
-            firebaseAuth.signOut().then(function () {
+        var fa = getFirebaseAuth();
+        if (fa) {
+            fa.signOut().then(function () {
                 if (loginScreen) loginScreen.classList.remove('hidden');
                 if (appContent) appContent.classList.add('hidden');
                 if (loginForm) loginForm.reset();
@@ -1328,7 +1361,8 @@ function init() {
         if (appContent) appContent.classList.add('hidden');
         if (verifyScreen) verifyScreen.classList.add('hidden');
         if (firebaseVerifyScreen) firebaseVerifyScreen.classList.add('hidden');
-        if (USE_FIREBASE && firebaseAuth) firebaseAuth.signOut();
+        var fa = getFirebaseAuth();
+        if (fa) fa.signOut();
         window.history.replaceState({}, document.title, window.location.pathname || 'index.html');
         initTheme();
         initAuthTabs();
