@@ -184,7 +184,7 @@
         <p class="text-white/70 text-xs text-center mt-6">Powered by Groq + Llama 3.3</p>
     </div>
 
-    <!-- Email Verification Screen -->
+    <!-- Email Verification Screen (link-based) -->
     <div id="verifyScreen" class="min-h-screen flex items-center justify-center px-4 py-8 hidden">
         <div class="w-full max-w-md">
             <div class="text-center mb-6">
@@ -193,7 +193,6 @@
                 <p class="text-slate-500 text-sm mt-2">Check your email and click the link</p>
                 <p class="text-accent-400 font-medium mt-1" id="verifyEmailDisplay">your@email.com</p>
             </div>
-
             <div class="rounded-2xl bg-slate-900/80 border border-slate-700/50 p-8 space-y-5">
                 <p class="text-slate-300 text-sm text-center">
                     Click the link in that email to verify your account. You can then sign in and access the app.
@@ -202,10 +201,12 @@
                     <i class="fas fa-check-circle mr-1"></i> Verification email sent! Check your inbox.
                 </p>
                 <p id="verifyLinkResendError" class="text-rose-500 text-sm hidden"></p>
-                <button type="button" id="btnResendLink" class="w-full py-3 rounded-xl bg-accent-600 hover:bg-accent-500 text-slate-950 font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button type="button" id="btnResendLink"
+                        class="w-full py-3 rounded-xl bg-accent-600 hover:bg-accent-500 text-slate-950 font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                     <i class="fas fa-paper-plane mr-2"></i> Resend verification email
                 </button>
                 <span id="verifyLinkResendTimer" class="text-slate-500 text-sm block text-center hidden"></span>
+                <button type="button" id="btnBackToLogin" class="w-full text-sm text-slate-400 hover:text-slate-200 transition-colors mt-1">Back to sign in</button>
             </div>
         </div>
     </div>
