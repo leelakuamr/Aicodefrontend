@@ -93,6 +93,10 @@ const btnResendFirebase = document.getElementById('btnResendFirebase');
 const firebaseResendTimer = document.getElementById('firebaseResendTimer');
 const btnAlreadyVerified = document.getElementById('btnAlreadyVerified');
 const btnSignOutFromVerify = document.getElementById('btnSignOutFromVerify');
+const verifyLinkResendSuccess = document.getElementById('verifyLinkResendSuccess');
+const verifyLinkResendError = document.getElementById('verifyLinkResendError');
+const btnResendLink = document.getElementById('btnResendLink');
+const verifyLinkResendTimer = document.getElementById('verifyLinkResendTimer');
 const btnDemoLogin = document.getElementById('btnDemoLogin');
 const welcomeModalOverlay = document.getElementById('welcomeModalOverlay');
 const btnCloseWelcome = document.getElementById('btnCloseWelcome');
@@ -1009,6 +1013,49 @@ function initFirebaseVerifyScreen() {
                 })
                 .finally(function () {
                     btnResendFirebase.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Resend verification email';
+                });
+        });
+    }
+
+    if (btnResendLink) {
+        btnResendLink.addEventListener('click', function () {
+            var user = firebaseAuth.currentUser;
+            if (!user) return;
+            if (verifyLinkResendSuccess) verifyLinkResendSuccess.classList.add('hidden');
+            if (verifyLinkResendError) {
+                verifyLinkResendError.textContent = '';
+                verifyLinkResendError.classList.add('hidden');
+            }
+            btnResendLink.disabled = true;
+            btnResendLink.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sending...';
+            var actionCodeSettings = getEmailVerificationActionCodeSettings();
+            user.sendEmailVerification(actionCodeSettings || undefined)
+                .then(function () {
+                    if (verifyLinkResendSuccess) verifyLinkResendSuccess.classList.remove('hidden');
+                    if (verifyLinkResendTimer) {
+                        verifyLinkResendTimer.classList.remove('hidden');
+                        var secs = FIREBASE_RESEND_COOLDOWN_SEC;
+                        verifyLinkResendTimer.textContent = '(Resend in ' + secs + 's)';
+                        var altInt = setInterval(function () {
+                            secs--;
+                            verifyLinkResendTimer.textContent = '(Resend in ' + secs + 's)';
+                            if (secs <= 0) {
+                                clearInterval(altInt);
+                                btnResendLink.disabled = false;
+                                verifyLinkResendTimer.classList.add('hidden');
+                            }
+                        }, 1000);
+                    }
+                })
+                .catch(function (err) {
+                    if (verifyLinkResendError) {
+                        verifyLinkResendError.textContent = getFirebaseAuthErrorMessage(err);
+                        verifyLinkResendError.classList.remove('hidden');
+                    }
+                    btnResendLink.disabled = false;
+                })
+                .finally(function () {
+                    btnResendLink.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Resend verification email';
                 });
         });
     }

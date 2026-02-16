@@ -190,33 +190,23 @@
             <div class="text-center mb-6">
                 <span class="text-6xl">📧</span>
                 <h1 class="text-2xl font-bold mt-4 bg-gradient-to-r from-accent-400 to-emerald-500 bg-clip-text text-transparent">Verify Your Email</h1>
-                <p class="text-slate-500 text-sm mt-2">We sent a 6-digit verification code to</p>
+                <p class="text-slate-500 text-sm mt-2">Check your email and click the link</p>
                 <p class="text-accent-400 font-medium mt-1" id="verifyEmailDisplay">your@email.com</p>
             </div>
 
-            <form id="verifyForm" class="rounded-2xl bg-slate-900/80 border border-slate-700/50 p-8 space-y-5">
-                <div>
-                    <label for="verifyCode" class="block text-sm font-medium text-slate-300 mb-2">Verification Code</label>
-                    <input type="text" id="verifyCode" required maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="000000" 
-                        class="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 text-center text-2xl tracking-[0.5em] font-mono placeholder-slate-500 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 outline-none transition">
-                    <p class="text-slate-500 text-xs mt-1">Enter the 6-digit code from your email</p>
-                </div>
-                <p id="verifyError" class="text-rose-500 text-sm hidden"></p>
-                <button type="submit" id="verifyBtn" class="w-full py-3 rounded-xl bg-accent-600 hover:bg-accent-500 text-slate-950 font-semibold transition-all flex items-center justify-center gap-2">
-                    <i class="fas fa-check-circle"></i>
-                    Verify Email
+            <div class="rounded-2xl bg-slate-900/80 border border-slate-700/50 p-8 space-y-5">
+                <p class="text-slate-300 text-sm text-center">
+                    Click the link in that email to verify your account. You can then sign in and access the app.
+                </p>
+                <p id="verifyLinkResendSuccess" class="text-emerald-400 text-sm text-center hidden">
+                    <i class="fas fa-check-circle mr-1"></i> Verification email sent! Check your inbox.
+                </p>
+                <p id="verifyLinkResendError" class="text-rose-500 text-sm hidden"></p>
+                <button type="button" id="btnResendLink" class="w-full py-3 rounded-xl bg-accent-600 hover:bg-accent-500 text-slate-950 font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-paper-plane mr-2"></i> Resend verification email
                 </button>
-                <div class="text-center">
-                    <button type="button" id="btnResend" class="text-sm text-accent-400 hover:text-accent-300 transition-colors disabled:text-slate-600 disabled:cursor-not-allowed">
-                        Resend code
-                    </button>
-                    <span id="resendTimer" class="text-slate-600 text-sm ml-2 hidden"></span>
-                </div>
-                <button type="button" id="btnBackToLogin" class="w-full text-sm text-slate-500 hover:text-slate-300 transition-colors">
-                    <i class="fas fa-arrow-left mr-2"></i>Back to Sign In
-                </button>
-            </form>
-            <p class="text-slate-500 text-xs text-center mt-4">Demo: Use code <strong>123456</strong> when backend is offline</p>
+                <span id="verifyLinkResendTimer" class="text-slate-500 text-sm block text-center hidden"></span>
+            </div>
         </div>
     </div>
 
