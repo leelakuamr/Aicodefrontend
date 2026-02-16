@@ -748,45 +748,19 @@ function initFirebaseAuth() {
             if (firebaseVerifyScreen) firebaseVerifyScreen.classList.add('hidden');
             if (appContent) appContent.classList.add('hidden');
             teardownPresence();
-            // Show "Email verified! You can now sign in." if they just came from the verification link
-            if (sessionStorage.getItem(EMAIL_JUST_VERIFIED_FLAG)) {
-                sessionStorage.removeItem(EMAIL_JUST_VERIFIED_FLAG);
-                if (loginVerifiedSuccess) {
-                    loginVerifiedSuccess.classList.remove('hidden');
-                    if (formContainer && !formContainer.classList.contains('flipped')) formContainer.classList.add('flipped');
-                    if (authSubtitle) authSubtitle.textContent = 'Sign in to access the code review tool';
-                    setTimeout(function () { if (loginVerifiedSuccess) loginVerifiedSuccess.classList.add('hidden'); }, 8000);
-                }
-                if (loginError) { loginError.textContent = ''; loginError.classList.add('hidden'); }
-            }
             return;
         }
         var userData = { email: user.email || user.displayName || user.uid };
-        var params = typeof window !== 'undefined' && window.location && window.location.search ? new URLSearchParams(window.location.search) : null;
-        var justVerified = params && params.get('mode') === 'verifyEmail';
-        // After clicking verification link: show sign-in page instead of auto sign-in
-        if (user.emailVerified && justVerified) {
-            try { window.history.replaceState({}, document.title, window.location.pathname || '/'); } catch (e) {}
-            sessionStorage.setItem(EMAIL_JUST_VERIFIED_FLAG, '1');
-            firebaseAuth.signOut();
-            return;
-        }
-        // Demo user: skip email verification. Real users: require verification
-        var isDemoUser = user.email === DEMO_EMAIL;
-        if (user.emailVerified || isDemoUser) {
-            if (sessionStorage.getItem(DEMO_USER_FLAG)) {
-                setTimeout(function () {
-                    sessionStorage.removeItem(DEMO_USER_FLAG);
-                    showAppForUser(userData);
-                }, 4000);
-            } else {
+        if (sessionStorage.getItem(DEMO_USER_FLAG)) {
+            setTimeout(function () {
+                sessionStorage.removeItem(DEMO_USER_FLAG);
                 showAppForUser(userData);
-            }
-            setupPresence(user);
-            return;
+            }, 4000);
+        } else {
+            showAppForUser(userData);
         }
-        // User signed in but not verified: show verification screen and block dashboard access
-        showFirebaseVerifyScreen(user.email);
+        setupPresence(user);
+        return;
     });
 }
 
@@ -845,7 +819,8 @@ function initLoginForm() {
             }
             const msg = (data.message || '').toLowerCase();
             if (data.code === 'EMAIL_NOT_VERIFIED' || msg.includes('verify') || msg.includes('verification')) {
-                showVerifyScreen(email, email.split('@')[0]);
+                sessionStorage.setItem(AUTH_KEY, JSON.stringify({ email, username: email.split('@')[0] }));
+                checkAuth();
                 return;
             }
             throw new Error(data.message || 'Invalid credentials');
@@ -902,24 +877,8 @@ function initSignupForm() {
                                 }).catch(function () {});
                             } catch (e) {}
                         }
-                        var actionCodeSettings = getEmailVerificationActionCodeSettings();
-                        user.sendEmailVerification(actionCodeSettings || undefined).then(function () {
-                            // onAuthStateChanged will show firebaseVerifyScreen (user not verified yet)
-                        }).catch(function (err) {
-                            // User will already be on verify screen; show friendly message there, not on signup form
-                            var msg = err && err.code === 'auth/too-many-requests'
-                                ? 'Check your inbox (and spam) for the link we sent. You can resend in a few minutes.'
-                                : getFirebaseAuthErrorMessage(err);
-                            if (firebaseVerifyResendError) {
-                                firebaseVerifyResendError.textContent = msg;
-                                firebaseVerifyResendError.classList.remove('hidden');
-                            }
-                            signupError.textContent = msg;
-                            signupError.classList.remove('hidden');
-                        });
+                        sessionStorage.setItem(SHOW_WELCOME_FLAG, '1');
                     }
-                    // onAuthStateChanged will show verify screen; welcome modal after they verify and sign in again
-                    sessionStorage.setItem(SHOW_WELCOME_FLAG, '1');
                 })
                 .catch(function (err) {
                     signupError.textContent = getFirebaseAuthErrorMessage(err);
@@ -960,14 +919,18 @@ function initSignupForm() {
             });
             if (res.ok) {
                 const data = await res.json().catch(() => ({}));
-                showVerifyScreen(data.email || email, data.username || name);
+                sessionStorage.setItem(AUTH_KEY, JSON.stringify({ email: data.email || email, username: data.username || name }));
+                sessionStorage.setItem(SHOW_WELCOME_FLAG, '1');
+                checkAuth();
                 return;
             }
             const err = await res.json().catch(() => ({}));
             throw new Error(err.message || 'Signup failed');
         } catch (err) {
             if (err.message.includes('fetch') || err.message.includes('Failed')) {
-                showVerifyScreen(email, name);
+                sessionStorage.setItem(AUTH_KEY, JSON.stringify({ email, username: name }));
+                sessionStorage.setItem(SHOW_WELCOME_FLAG, '1');
+                checkAuth();
                 return;
             }
             signupError.textContent = err.message || 'Signup failed. Try again.';
@@ -1401,8 +1364,6 @@ function init() {
         initLoginForm();
         initForgotPassword();
         initSignupForm();
-        initVerifyForm();
-        initFirebaseVerifyScreen();
         initLogout();
         initWelcomeModal();
         initFirebaseAuth();
@@ -1419,8 +1380,6 @@ function init() {
     initLoginForm();
     initForgotPassword();
     initSignupForm();
-    initVerifyForm();
-    initFirebaseVerifyScreen();
     initLogout();
     initWelcomeModal();
     initFirebaseAuth();
