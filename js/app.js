@@ -401,7 +401,6 @@ function initForgotPassword() {
         });
     });
 }
-
 // --- Firebase: show/hide "verify your email" screen (link-based) ---
 // Always clear error/success state when showing so first-time view is clean.
 function showFirebaseVerifyScreen(email) {
