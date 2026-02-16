@@ -402,60 +402,6 @@ function initForgotPassword() {
     });
 }
 
-function initSocialAuthButtons() {
-    var googleBtns = document.querySelectorAll('.auth-3d-social-btn[aria-label="Google"]');
-    var linkedinBtns = document.querySelectorAll('.auth-3d-social-btn[aria-label="LinkedIn"]');
-    if (googleBtns && googleBtns.length) {
-        googleBtns.forEach(function (btn) {
-            btn.addEventListener('click', function (e) {
-                e.preventDefault();
-                if (loginError) { loginError.textContent = ''; loginError.classList.add('hidden'); }
-                if (signupError) { signupError.textContent = ''; signupError.classList.add('hidden'); }
-                if (USE_FIREBASE && firebaseAuth && typeof firebase !== 'undefined' && firebase && firebase.auth) {
-                    try {
-                        var provider = new firebase.auth.GoogleAuthProvider();
-                        firebaseAuth.signInWithPopup(provider).then(function (result) {
-                            var u = result && result.user;
-                            var email = (u && (u.email || 'google.user@example.com')) || 'google.user@example.com';
-                            var username = (u && (u.displayName || (u.email ? u.email.split('@')[0] : 'GoogleUser'))) || 'GoogleUser';
-                            sessionStorage.setItem(AUTH_KEY, JSON.stringify({ email: email, username: username }));
-                            showAppForUser({ email: email, username: username });
-                        }).catch(function (err) {
-                            var msg = typeof getFirebaseAuthErrorMessage === 'function'
-                                ? getFirebaseAuthErrorMessage(err)
-                                : (err && err.message) || 'Google sign-in failed.';
-                            if (loginError) { loginError.textContent = msg; loginError.classList.remove('hidden'); }
-                        });
-                    } catch (err) {
-                        var msg2 = (err && err.message) || 'Google sign-in failed.';
-                        if (loginError) { loginError.textContent = msg2; loginError.classList.remove('hidden'); }
-                    }
-                } else {
-                    sessionStorage.setItem(AUTH_KEY, JSON.stringify({ email: 'google.user@example.com', username: 'GoogleUser' }));
-                    showAppForUser({ email: 'google.user@example.com', username: 'GoogleUser' });
-                }
-            });
-        });
-    }
-    if (linkedinBtns && linkedinBtns.length) {
-        linkedinBtns.forEach(function (btn) {
-            btn.addEventListener('click', function (e) {
-                e.preventDefault();
-                var url = (typeof window !== 'undefined' && window.LINKEDIN_AUTH_URL) ? window.LINKEDIN_AUTH_URL : '';
-                if (url && url !== 'DEMO') {
-                    try {
-                        window.open(url, '_blank', 'noopener,noreferrer');
-                    } catch (_) {
-                        window.location.href = url;
-                    }
-                    return;
-                }
-                sessionStorage.setItem(AUTH_KEY, JSON.stringify({ email: 'linkedin.user@example.com', username: 'LinkedInUser' }));
-                showAppForUser({ email: 'linkedin.user@example.com', username: 'LinkedInUser' });
-            });
-        });
-    }
-}
 // --- Firebase: show/hide "verify your email" screen (link-based) ---
 // Always clear error/success state when showing so first-time view is clean.
 function showFirebaseVerifyScreen(email) {
@@ -1453,7 +1399,6 @@ function init() {
         initAuthTabs();
         initDemoLogin();
         initAuth3dPasswordToggle();
-        initSocialAuthButtons();
         initLoginForm();
         initForgotPassword();
         initSignupForm();
@@ -1472,7 +1417,6 @@ function init() {
     initAuthTabs();
     initDemoLogin();
     initAuth3dPasswordToggle();
-    initSocialAuthButtons();
     initLoginForm();
     initForgotPassword();
     initSignupForm();
