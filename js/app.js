@@ -906,39 +906,12 @@ function initSignupForm() {
             signupError.classList.remove('hidden');
             return;
         }
-        signupBtn.disabled = true;
-        signupBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating account...';
         const name = signupName.value.trim();
         const email = signupEmail.value.trim();
-        const password = signupPassword.value;
-        try {
-            const res = await fetch(`${API_BASE}/api/signup`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password })
-            });
-            if (res.ok) {
-                const data = await res.json().catch(() => ({}));
-                sessionStorage.setItem(AUTH_KEY, JSON.stringify({ email: data.email || email, username: data.username || name }));
-                sessionStorage.setItem(SHOW_WELCOME_FLAG, '1');
-                checkAuth();
-                return;
-            }
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.message || 'Signup failed');
-        } catch (err) {
-            if (err.message.includes('fetch') || err.message.includes('Failed')) {
-                sessionStorage.setItem(AUTH_KEY, JSON.stringify({ email, username: name }));
-                sessionStorage.setItem(SHOW_WELCOME_FLAG, '1');
-                checkAuth();
-                return;
-            }
-            signupError.textContent = err.message || 'Signup failed. Try again.';
-            signupError.classList.remove('hidden');
-        } finally {
-            signupBtn.disabled = false;
-            signupBtn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
-        }
+        sessionStorage.setItem(AUTH_KEY, JSON.stringify({ email, username: name }));
+        sessionStorage.setItem(SHOW_WELCOME_FLAG, '1');
+        checkAuth();
+        return;
     });
 }
 
