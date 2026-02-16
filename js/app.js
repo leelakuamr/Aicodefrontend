@@ -688,6 +688,42 @@ function initVerifyForm() {
     });
 }
 
+// Link-based verification: resend link for non-Firebase flow
+function initVerifyLinkResend() {
+    if (USE_FIREBASE) return;
+    if (!btnResendLink) return;
+    btnResendLink.addEventListener('click', async function () {
+        const pending = sessionStorage.getItem(PENDING_VERIFY_KEY);
+        if (!pending) return;
+        const { email } = JSON.parse(pending);
+        if (verifyLinkResendSuccess) verifyLinkResendSuccess.classList.add('hidden');
+        if (verifyLinkResendError) { verifyLinkResendError.textContent = ''; verifyLinkResendError.classList.add('hidden'); }
+        btnResendLink.disabled = true;
+        btnResendLink.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sending...';
+        try {
+            const res = await fetch(`${API_BASE}/api/send-code`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            if (res.ok) {
+                if (verifyLinkResendSuccess) verifyLinkResendSuccess.classList.remove('hidden');
+            } else {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.message || 'Failed to resend');
+            }
+        } catch (err) {
+            if (verifyLinkResendError) {
+                verifyLinkResendError.textContent = (err && err.message) ? err.message : 'Failed to resend';
+                verifyLinkResendError.classList.remove('hidden');
+            }
+        } finally {
+            btnResendLink.disabled = false;
+            btnResendLink.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Resend verification email';
+        }
+    });
+}
+
 // Demo Login
 const DEMO_EMAIL = 'demo@coderev.com';
 const DEMO_PASSWORD = 'password123';
@@ -1512,6 +1548,7 @@ function init() {
         initForgotPassword();
         initSignupForm();
         initVerifyForm();
+        initVerifyLinkResend();
         initFirebaseVerifyScreen();
         initLogout();
         initWelcomeModal();
@@ -1530,6 +1567,7 @@ function init() {
     initForgotPassword();
     initSignupForm();
     initVerifyForm();
+    initVerifyLinkResend();
     initFirebaseVerifyScreen();
     initLogout();
     initWelcomeModal();
