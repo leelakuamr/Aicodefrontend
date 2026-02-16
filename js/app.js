@@ -93,10 +93,6 @@ const btnResendFirebase = document.getElementById('btnResendFirebase');
 const firebaseResendTimer = document.getElementById('firebaseResendTimer');
 const btnAlreadyVerified = document.getElementById('btnAlreadyVerified');
 const btnSignOutFromVerify = document.getElementById('btnSignOutFromVerify');
-const verifyLinkResendSuccess = document.getElementById('verifyLinkResendSuccess');
-const verifyLinkResendError = document.getElementById('verifyLinkResendError');
-const btnResendLink = document.getElementById('btnResendLink');
-const verifyLinkResendTimer = document.getElementById('verifyLinkResendTimer');
 const btnDemoLogin = document.getElementById('btnDemoLogin');
 const welcomeModalOverlay = document.getElementById('welcomeModalOverlay');
 const btnCloseWelcome = document.getElementById('btnCloseWelcome');
@@ -620,7 +616,7 @@ function initVerifyForm() {
         const { email } = JSON.parse(pending);
         btnResend.disabled = true;
         try {
-            const res = await fetch(`${API_BASE}/api/resend-code`, {
+            const res = await fetch(`${API_BASE}/api/resend-verification`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
@@ -643,40 +639,6 @@ function initVerifyForm() {
         }
     });
 
-    // If the markup uses 'btnResendLink' (link-based UI) but Firebase isn't configured,
-    // fall back to backend code resend so users still get a 6‑digit code.
-    if (typeof btnResendLink !== 'undefined' && btnResendLink && !USE_FIREBASE) {
-        btnResendLink.addEventListener('click', async () => {
-            const pending = sessionStorage.getItem(PENDING_VERIFY_KEY);
-            if (!pending) return;
-            const { email } = JSON.parse(pending);
-            btnResendLink.disabled = true;
-            btnResendLink.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sending...';
-            try {
-                const res = await fetch(`${API_BASE}/api/send-code`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
-                });
-                if (res.ok) {
-                    if (verifyLinkResendSuccess) verifyLinkResendSuccess.classList.remove('hidden');
-                    startResendCooldown();
-                } else {
-                    const err = await res.json().catch(() => ({}));
-                    throw new Error(err.message || 'Failed to resend');
-                }
-            } catch (err) {
-                if (verifyLinkResendError) {
-                    verifyLinkResendError.textContent = (err && err.message) ? err.message : 'Failed to resend';
-                    verifyLinkResendError.classList.remove('hidden');
-                }
-            } finally {
-                btnResendLink.disabled = false;
-                btnResendLink.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Resend verification email';
-            }
-        });
-    }
-
     btnBackToLogin?.addEventListener('click', function () {
         sessionStorage.removeItem(PENDING_VERIFY_KEY);
         if (verifyScreen) verifyScreen.classList.add('hidden');
@@ -685,42 +647,6 @@ function initVerifyForm() {
 
     verifyCode?.addEventListener('input', (e) => {
         e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
-    });
-}
-
-// Link-based verification: resend link for non-Firebase flow
-function initVerifyLinkResend() {
-    if (USE_FIREBASE) return;
-    if (!btnResendLink) return;
-    btnResendLink.addEventListener('click', async function () {
-        const pending = sessionStorage.getItem(PENDING_VERIFY_KEY);
-        if (!pending) return;
-        const { email } = JSON.parse(pending);
-        if (verifyLinkResendSuccess) verifyLinkResendSuccess.classList.add('hidden');
-        if (verifyLinkResendError) { verifyLinkResendError.textContent = ''; verifyLinkResendError.classList.add('hidden'); }
-        btnResendLink.disabled = true;
-        btnResendLink.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sending...';
-        try {
-            const res = await fetch(`${API_BASE}/api/send-code`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
-            if (res.ok) {
-                if (verifyLinkResendSuccess) verifyLinkResendSuccess.classList.remove('hidden');
-            } else {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.message || 'Failed to resend');
-            }
-        } catch (err) {
-            if (verifyLinkResendError) {
-                verifyLinkResendError.textContent = (err && err.message) ? err.message : 'Failed to resend';
-                verifyLinkResendError.classList.remove('hidden');
-            }
-        } finally {
-            btnResendLink.disabled = false;
-            btnResendLink.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Resend verification email';
-        }
     });
 }
 
@@ -1083,49 +1009,6 @@ function initFirebaseVerifyScreen() {
                 })
                 .finally(function () {
                     btnResendFirebase.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Resend verification email';
-                });
-        });
-    }
-
-    if (btnResendLink) {
-        btnResendLink.addEventListener('click', function () {
-            var user = firebaseAuth.currentUser;
-            if (!user) return;
-            if (verifyLinkResendSuccess) verifyLinkResendSuccess.classList.add('hidden');
-            if (verifyLinkResendError) {
-                verifyLinkResendError.textContent = '';
-                verifyLinkResendError.classList.add('hidden');
-            }
-            btnResendLink.disabled = true;
-            btnResendLink.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sending...';
-            var actionCodeSettings = getEmailVerificationActionCodeSettings();
-            user.sendEmailVerification(actionCodeSettings || undefined)
-                .then(function () {
-                    if (verifyLinkResendSuccess) verifyLinkResendSuccess.classList.remove('hidden');
-                    if (verifyLinkResendTimer) {
-                        verifyLinkResendTimer.classList.remove('hidden');
-                        var secs = FIREBASE_RESEND_COOLDOWN_SEC;
-                        verifyLinkResendTimer.textContent = '(Resend in ' + secs + 's)';
-                        var altInt = setInterval(function () {
-                            secs--;
-                            verifyLinkResendTimer.textContent = '(Resend in ' + secs + 's)';
-                            if (secs <= 0) {
-                                clearInterval(altInt);
-                                btnResendLink.disabled = false;
-                                verifyLinkResendTimer.classList.add('hidden');
-                            }
-                        }, 1000);
-                    }
-                })
-                .catch(function (err) {
-                    if (verifyLinkResendError) {
-                        verifyLinkResendError.textContent = getFirebaseAuthErrorMessage(err);
-                        verifyLinkResendError.classList.remove('hidden');
-                    }
-                    btnResendLink.disabled = false;
-                })
-                .finally(function () {
-                    btnResendLink.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Resend verification email';
                 });
         });
     }
@@ -1502,35 +1385,6 @@ function initCopyButtons() {
 // Initialize app
 function init() {
     var urlParams = new URLSearchParams(window.location.search);
-    if (!USE_FIREBASE) {
-        var vtoken = urlParams.get('vtoken');
-        if (vtoken) {
-            fetch(API_BASE + '/api/verify-link', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: vtoken })
-            }).then(function (res) { return res.json().then(function (d){ return { ok: res.ok, data: d }; }); })
-              .then(function (r) {
-                  try { window.history.replaceState({}, document.title, window.location.pathname || '/'); } catch (e) {}
-                  if (r.ok) {
-                      sessionStorage.setItem(EMAIL_JUST_VERIFIED_FLAG, '1');
-                      if (loginScreen) loginScreen.classList.remove('hidden');
-                      if (verifyScreen) verifyScreen.classList.add('hidden');
-                      if (appContent) appContent.classList.add('hidden');
-                      if (formContainer && !formContainer.classList.contains('flipped')) formContainer.classList.add('flipped');
-                      var msg = document.getElementById('loginVerifiedSuccess');
-                      if (msg) {
-                          msg.classList.remove('hidden');
-                          setTimeout(function(){ msg.classList.add('hidden'); }, 8000);
-                      }
-                  } else {
-                      var errEl = document.getElementById('verifyLinkResendError');
-                      if (errEl) { errEl.textContent = (r.data && r.data.detail) ? r.data.detail : 'Invalid link'; errEl.classList.remove('hidden'); }
-                  }
-              })
-              .catch(function(){});
-        }
-    }
     if (urlParams.get('show') === 'login') {
         sessionStorage.removeItem(AUTH_KEY);
         sessionStorage.removeItem(PENDING_VERIFY_KEY);
@@ -1548,7 +1402,6 @@ function init() {
         initForgotPassword();
         initSignupForm();
         initVerifyForm();
-        initVerifyLinkResend();
         initFirebaseVerifyScreen();
         initLogout();
         initWelcomeModal();
@@ -1567,7 +1420,6 @@ function init() {
     initForgotPassword();
     initSignupForm();
     initVerifyForm();
-    initVerifyLinkResend();
     initFirebaseVerifyScreen();
     initLogout();
     initWelcomeModal();
